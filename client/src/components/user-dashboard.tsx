@@ -1,14 +1,15 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { apiRequest } from "@/lib/queryClient";
 import { Transaction } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
-import { Wallet, TrendingUp, TrendingDown, History, Plus, ArrowUp, Bitcoin, Coins, DollarSign } from "lucide-react";
+import { Wallet, TrendingUp, TrendingDown, History, Plus, ArrowUp, Bitcoin, Coins, DollarSign, AlertTriangle, Star } from "lucide-react";
 
 export default function UserDashboard() {
   const { user } = useAuth();
@@ -20,6 +21,8 @@ export default function UserDashboard() {
   const [withdrawAmount, setWithdrawAmount] = useState("");
   const [withdrawCurrency, setWithdrawCurrency] = useState("BTC");
   const [withdrawAddress, setWithdrawAddress] = useState("");
+  const [showDepositPrompt, setShowDepositPrompt] = useState(false);
+  const [promptType, setPromptType] = useState<"minimum" | "maximum" | null>(null);
 
   const { data: transactions = [] } = useQuery<Transaction[]>({
     queryKey: ["/api/transactions"],
@@ -56,6 +59,31 @@ export default function UserDashboard() {
       queryClient.invalidateQueries({ queryKey: ["/api/transactions"] });
     },
   });
+
+  // Monitor demo balance and show deposit prompts
+  useEffect(() => {
+    if (user?.demoBalance) {
+      const demoBalance = parseFloat(user.demoBalance);
+      const realBalance = parseFloat(user.realBalance || "0");
+      
+      // Only show prompts if user has no real balance deposits
+      if (realBalance === 0) {
+        if (demoBalance >= 100) {
+          setShowDepositPrompt(true);
+          setPromptType("maximum");
+        } else if (demoBalance <= 5) {
+          setShowDepositPrompt(true);
+          setPromptType("minimum");
+        } else {
+          setShowDepositPrompt(false);
+          setPromptType(null);
+        }
+      } else {
+        setShowDepositPrompt(false);
+        setPromptType(null);
+      }
+    }
+  }, [user?.demoBalance, user?.realBalance]);
 
   const handleDeposit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -112,6 +140,44 @@ export default function UserDashboard() {
           </div>
         </div>
         
+        {/* Deposit Prompts */}
+        {showDepositPrompt && (
+          <Alert className={`${
+            promptType === "maximum" ? "border-green-500 bg-green-500/10" : "border-red-500 bg-red-500/10"
+          }`}>
+            <AlertTriangle className={`h-4 w-4 ${
+              promptType === "maximum" ? "text-green-400" : "text-red-400"
+            }`} />
+            <AlertDescription className="text-white">
+              {promptType === "maximum" ? (
+                <div className="space-y-2">
+                  <p className="font-semibold text-green-400">🎉 Congratulations! You've reached $100 in demo winnings!</p>
+                  <p>It's time to play with real money and withdraw your winnings. Make a deposit to unlock real money gaming.</p>
+                  <Button 
+                    onClick={() => document.getElementById('deposit-form')?.scrollIntoView({ behavior: 'smooth' })}
+                    className="bg-green-500 hover:bg-green-600 text-white mt-2"
+                  >
+                    <Star className="mr-2 h-4 w-4" />
+                    Deposit Now
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <p className="font-semibold text-red-400">⚠️ Demo Balance Running Low!</p>
+                  <p>You have ${user.demoBalance} left. Make a deposit to continue playing and unlock real money winnings.</p>
+                  <Button 
+                    onClick={() => document.getElementById('deposit-form')?.scrollIntoView({ behavior: 'smooth' })}
+                    className="bg-red-500 hover:bg-red-600 text-white mt-2"
+                  >
+                    <DollarSign className="mr-2 h-4 w-4" />
+                    Deposit Now
+                  </Button>
+                </div>
+              )}
+            </AlertDescription>
+          </Alert>
+        )}
+        
         {/* Transaction History */}
         <div className="bg-gray-800/30 rounded-xl p-6">
           <h3 className="text-xl font-bold mb-4 text-yellow-400 flex items-center space-x-2">
@@ -165,7 +231,7 @@ export default function UserDashboard() {
       {/* Quick Actions */}
       <div className="space-y-6">
         {/* Deposit Form */}
-        <div className="bg-gray-800/30 rounded-xl p-6">
+        <div id="deposit-form" className="bg-gray-800/30 rounded-xl p-6">
           <h3 className="text-xl font-bold mb-4 text-green-400 flex items-center space-x-2">
             <Plus size={20} />
             <span>Deposit Crypto</span>

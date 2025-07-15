@@ -10,7 +10,7 @@ export const users = pgTable("users", {
   phone: text("phone").notNull().unique(),
   password: text("password").notNull(),
   realBalance: decimal("real_balance", { precision: 10, scale: 2 }).default("0.00"),
-  demoBalance: decimal("demo_balance", { precision: 10, scale: 2 }).default("20.00"),
+  demoBalance: decimal("demo_balance", { precision: 10, scale: 2 }).default("100.00"),
   isAdmin: boolean("is_admin").default(false),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),

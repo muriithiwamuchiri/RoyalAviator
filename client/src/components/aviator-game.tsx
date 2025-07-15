@@ -291,7 +291,42 @@ export default function AviatorGame() {
     if (!user || gameState.status !== 'waiting') return;
     
     const amount = parseFloat(betAmount);
-    if (isNaN(amount) || amount <= 0) return;
+    if (isNaN(amount) || amount <= 0) {
+      toast({
+        title: "Invalid bet amount",
+        description: "Please enter a valid amount",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Determine which balance to use
+    const hasRealBalance = parseFloat(user.realBalance || "0") > 0;
+    const demoBalance = parseFloat(user.demoBalance || "0");
+    const realBalance = parseFloat(user.realBalance || "0");
+    
+    // Check balance availability
+    if (!hasRealBalance) {
+      // Playing with demo balance
+      if (amount > demoBalance) {
+        toast({
+          title: "Insufficient demo balance",
+          description: "You don't have enough demo balance to place this bet",
+          variant: "destructive",
+        });
+        return;
+      }
+    } else {
+      // Playing with real balance
+      if (amount > realBalance) {
+        toast({
+          title: "Insufficient real balance",
+          description: "You don't have enough real balance to place this bet",
+          variant: "destructive",
+        });
+        return;
+      }
+    }
 
     setUserBet(amount);
     
@@ -305,7 +340,8 @@ export default function AviatorGame() {
       wsRef.current.send(JSON.stringify({
         type: 'placeBet',
         amount: amount,
-        autoCashout: parseFloat(autoCashout)
+        autoCashout: parseFloat(autoCashout),
+        isDemo: !hasRealBalance
       }));
     }
   };
@@ -407,6 +443,28 @@ export default function AviatorGame() {
       
       {/* Game Controls */}
       <div className="space-y-6">
+        {/* Balance Mode Indicator */}
+        {user && (
+          <div className="bg-gray-800/50 rounded-xl p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h4 className="font-semibold text-white">Playing Mode</h4>
+                <p className="text-sm text-gray-400">
+                  {parseFloat(user.realBalance || "0") === 0 ? "Demo Account" : "Real Money"}
+                </p>
+              </div>
+              <div className="text-right">
+                <div className="text-lg font-bold text-yellow-400">
+                  ${parseFloat(user.realBalance || "0") === 0 ? user.demoBalance : user.realBalance}
+                </div>
+                <div className="text-sm text-gray-400">
+                  {parseFloat(user.realBalance || "0") === 0 ? "Demo Balance" : "Real Balance"}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+        
         <div className="grid grid-cols-2 gap-4">
           <div className="bg-gray-800/50 rounded-xl p-4">
             <Label className="text-sm text-gray-300 mb-2">Bet Amount</Label>
