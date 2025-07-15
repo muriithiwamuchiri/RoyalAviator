@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Game } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { Star, Play, Gift } from "lucide-react";
+import SlotGameModal from "./slot-game-modal";
 
 interface SlotGameCardProps {
   game: Game;
@@ -9,10 +10,10 @@ interface SlotGameCardProps {
 
 export default function SlotGameCard({ game }: SlotGameCardProps) {
   const [isHovered, setIsHovered] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   const handlePlayGame = () => {
-    // In a real implementation, this would navigate to the game
-    console.log(`Playing game: ${game.name}`);
+    setIsModalOpen(true);
   };
 
   return (
@@ -91,6 +92,13 @@ export default function SlotGameCard({ game }: SlotGameCardProps) {
           </div>
         )}
       </div>
+      
+      {/* Game Modal */}
+      <SlotGameModal 
+        game={game} 
+        isOpen={isModalOpen} 
+        onClose={() => setIsModalOpen(false)} 
+      />
     </div>
   );
 }

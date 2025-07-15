@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useAuth } from "@/hooks/use-auth";
 import Navigation from "@/components/navigation";
 import AviatorGame from "@/components/aviator-game";
 import SlotGameCard from "@/components/slot-game-card";
@@ -6,9 +7,12 @@ import UserDashboard from "@/components/user-dashboard";
 import Footer from "@/components/footer";
 import { useQuery } from "@tanstack/react-query";
 import { Game } from "@shared/schema";
-import { Loader2, Star, Gift, Shield, Coins, Zap } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Loader2, Star, Gift, Shield, Coins, Zap, LogIn, UserPlus } from "lucide-react";
+import { Link } from "wouter";
 
 export default function HomePage() {
+  const { user } = useAuth();
   const [gameFilter, setGameFilter] = useState<string>("all");
   const [showUserDashboard, setShowUserDashboard] = useState(false);
 
@@ -33,6 +37,33 @@ export default function HomePage() {
             <p className="text-xl text-gray-300 mb-8 max-w-2xl mx-auto">
               Experience the thrill of crypto gaming with our provably fair Aviator crash game and premium slot collection
             </p>
+            
+            {/* Guest Mode Notice */}
+            {!user && (
+              <div className="bg-gradient-to-r from-purple-600 to-purple-700 rounded-xl p-6 mb-8 max-w-4xl mx-auto">
+                <div className="flex items-center justify-center space-x-4 mb-4">
+                  <Gift className="text-yellow-400" size={32} />
+                  <div>
+                    <h3 className="text-2xl font-bold text-white">🎮 Playing in Demo Mode</h3>
+                    <p className="text-purple-200">All games are available with demo credits!</p>
+                  </div>
+                </div>
+                <div className="flex justify-center space-x-4">
+                  <Link href="/auth">
+                    <Button className="bg-green-500 hover:bg-green-600 text-white px-6 py-3 rounded-lg font-medium">
+                      <LogIn className="mr-2" size={16} />
+                      Login to Play Real Money
+                    </Button>
+                  </Link>
+                  <Link href="/auth">
+                    <Button variant="outline" className="border-purple-300 text-purple-100 hover:bg-purple-600 px-6 py-3 rounded-lg font-medium">
+                      <UserPlus className="mr-2" size={16} />
+                      Sign Up Free
+                    </Button>
+                  </Link>
+                </div>
+              </div>
+            )}
           </div>
           
           <div className="casino-card rounded-2xl p-8 mb-16">

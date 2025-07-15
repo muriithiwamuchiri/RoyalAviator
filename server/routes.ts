@@ -152,6 +152,103 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  // Games endpoints
+  app.get("/api/games", async (req, res) => {
+    try {
+      const games = await storage.getGames();
+      res.json(games);
+    } catch (error) {
+      console.error('Error fetching games:', error);
+      res.status(500).json({ error: 'Failed to fetch games' });
+    }
+  });
+
+  app.post("/api/games/play", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    try {
+      const { gameId, betAmount, isDemo } = req.body;
+      const userId = req.user!.id;
+
+      // Validate input
+      if (!gameId || !betAmount || typeof betAmount !== 'number' || betAmount <= 0) {
+        return res.status(400).json({ error: "Invalid game parameters" });
+      }
+
+      // Get user current balances
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      const currentDemoBalance = parseFloat(user.demoBalance || "0");
+      const currentRealBalance = parseFloat(user.realBalance || "0");
+
+      // Check if user has sufficient balance
+      if (isDemo) {
+        if (betAmount > currentDemoBalance) {
+          return res.status(400).json({ error: "Insufficient demo balance" });
+        }
+      } else {
+        if (betAmount > currentRealBalance) {
+          return res.status(400).json({ error: "Insufficient real balance" });
+        }
+      }
+
+      // Simulate game outcome (simple slot machine logic)
+      const random = Math.random();
+      let multiplier = 0;
+      let win = 0;
+
+      // Win probability based on RTP (simplified)
+      if (random < 0.1) { // 10% chance for big win
+        multiplier = 5 + Math.random() * 10; // 5x to 15x
+        win = betAmount * multiplier;
+      } else if (random < 0.3) { // 20% chance for medium win
+        multiplier = 1.5 + Math.random() * 2; // 1.5x to 3.5x
+        win = betAmount * multiplier;
+      } else if (random < 0.45) { // 15% chance for small win
+        multiplier = 1 + Math.random() * 0.5; // 1x to 1.5x
+        win = betAmount * multiplier;
+      }
+      // 55% chance for no win
+
+      // Update user balance
+      if (isDemo) {
+        const newDemoBalance = currentDemoBalance - betAmount + win;
+        await storage.updateUserBalance(userId, undefined, newDemoBalance.toFixed(2));
+      } else {
+        const newRealBalance = currentRealBalance - betAmount + win;
+        await storage.updateUserBalance(userId, newRealBalance.toFixed(2), undefined);
+      }
+
+      // Create game round record
+      await storage.createGameRound({
+        userId,
+        gameId,
+        betAmount: betAmount.toString(),
+        winAmount: win.toString(),
+        multiplier: multiplier.toString(),
+        isDemoMode: isDemo
+      });
+
+      res.json({
+        win,
+        multiplier,
+        result: win > 0 ? "win" : "loss",
+        newBalance: isDemo ? 
+          (currentDemoBalance - betAmount + win).toFixed(2) : 
+          (currentRealBalance - betAmount + win).toFixed(2)
+      });
+
+    } catch (error) {
+      console.error('Error playing game:', error);
+      res.status(500).json({ error: 'Failed to play game' });
+    }
+  });
+
   // Game rounds API
   app.post("/api/game/round", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);

@@ -288,7 +288,7 @@ export default function AviatorGame() {
   }, [gameState]);
 
   const handlePlaceBet = () => {
-    if (!user || gameState.status !== 'waiting') return;
+    if (gameState.status !== 'waiting') return;
     
     const amount = parseFloat(betAmount);
     if (isNaN(amount) || amount <= 0) {
@@ -300,31 +300,36 @@ export default function AviatorGame() {
       return;
     }
 
-    // Determine which balance to use
-    const hasRealBalance = parseFloat(user.realBalance || "0") > 0;
-    const demoBalance = parseFloat(user.demoBalance || "0");
-    const realBalance = parseFloat(user.realBalance || "0");
-    
-    // Check balance availability
-    if (!hasRealBalance) {
-      // Playing with demo balance
-      if (amount > demoBalance) {
-        toast({
-          title: "Insufficient demo balance",
-          description: "You don't have enough demo balance to place this bet",
-          variant: "destructive",
-        });
-        return;
-      }
+    // For guest users, allow unlimited demo play
+    if (!user) {
+      // Guest mode - no balance check, unlimited demo play
     } else {
-      // Playing with real balance
-      if (amount > realBalance) {
-        toast({
-          title: "Insufficient real balance",
-          description: "You don't have enough real balance to place this bet",
-          variant: "destructive",
-        });
-        return;
+      // Determine which balance to use
+      const hasRealBalance = parseFloat(user.realBalance || "0") > 0;
+      const demoBalance = parseFloat(user.demoBalance || "0");
+      const realBalance = parseFloat(user.realBalance || "0");
+      
+      // Check balance availability
+      if (!hasRealBalance) {
+        // Playing with demo balance
+        if (amount > demoBalance) {
+          toast({
+            title: "Insufficient demo balance",
+            description: "You don't have enough demo balance to place this bet",
+            variant: "destructive",
+          });
+          return;
+        }
+      } else {
+        // Playing with real balance
+        if (amount > realBalance) {
+          toast({
+            title: "Insufficient real balance",
+            description: "You don't have enough real balance to place this bet",
+            variant: "destructive",
+          });
+          return;
+        }
       }
     }
 
@@ -341,7 +346,8 @@ export default function AviatorGame() {
         type: 'placeBet',
         amount: amount,
         autoCashout: parseFloat(autoCashout),
-        isDemo: !hasRealBalance
+        isDemo: !user || !parseFloat(user?.realBalance || "0"),
+        userId: user?.id || 0
       }));
     }
   };
@@ -444,26 +450,24 @@ export default function AviatorGame() {
       {/* Game Controls */}
       <div className="space-y-6">
         {/* Balance Mode Indicator */}
-        {user && (
-          <div className="bg-gray-800/50 rounded-xl p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h4 className="font-semibold text-white">Playing Mode</h4>
-                <p className="text-sm text-gray-400">
-                  {parseFloat(user.realBalance || "0") === 0 ? "Demo Account" : "Real Money"}
-                </p>
+        <div className="bg-gray-800/50 rounded-xl p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h4 className="font-semibold text-white">Playing Mode</h4>
+              <p className="text-sm text-gray-400">
+                {!user ? "Guest Demo" : (parseFloat(user.realBalance || "0") === 0 ? "Demo Account" : "Real Money")}
+              </p>
+            </div>
+            <div className="text-right">
+              <div className="text-lg font-bold text-yellow-400">
+                {!user ? "∞" : (parseFloat(user.realBalance || "0") === 0 ? `$${user.demoBalance}` : `$${user.realBalance}`)}
               </div>
-              <div className="text-right">
-                <div className="text-lg font-bold text-yellow-400">
-                  ${parseFloat(user.realBalance || "0") === 0 ? user.demoBalance : user.realBalance}
-                </div>
-                <div className="text-sm text-gray-400">
-                  {parseFloat(user.realBalance || "0") === 0 ? "Demo Balance" : "Real Balance"}
-                </div>
+              <div className="text-sm text-gray-400">
+                {!user ? "Unlimited Demo" : (parseFloat(user.realBalance || "0") === 0 ? "Demo Balance" : "Real Balance")}
               </div>
             </div>
           </div>
-        )}
+        </div>
         
         <div className="grid grid-cols-2 gap-4">
           <div className="bg-gray-800/50 rounded-xl p-4">
@@ -501,7 +505,7 @@ export default function AviatorGame() {
           {!userBet ? (
             <Button
               onClick={handlePlaceBet}
-              disabled={!user || gameState.status !== 'waiting'}
+              disabled={gameState.status !== 'waiting'}
               className="flex-1 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white py-3 text-lg font-bold"
             >
               PLACE BET
