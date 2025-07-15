@@ -3,7 +3,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/hooks/use-auth";
-import { Plane, TrendingUp, DollarSign, Zap, Star } from "lucide-react";
+import { Plane, TrendingUp, DollarSign, Zap, Star, Volume2, VolumeX } from "lucide-react";
+import { AudioEffects } from "@/lib/audio-effects";
 
 interface GameState {
   multiplier: number;
@@ -28,7 +29,10 @@ export default function AviatorGame() {
   const [autoCashout, setAutoCashout] = useState("2.00");
   const [userBet, setUserBet] = useState<number | null>(null);
   const [isConnected, setIsConnected] = useState(false);
+  const [audioEnabled, setAudioEnabled] = useState(true);
   const wsRef = useRef<WebSocket | null>(null);
+  const audioRef = useRef<AudioEffects | null>(null);
+  const flyingSoundRef = useRef<OscillatorNode | null>(null);
 
   // Mock recent wins data with more appealing wins
   const recentWins: RecentWin[] = [
@@ -43,6 +47,9 @@ export default function AviatorGame() {
   ];
 
   useEffect(() => {
+    // Initialize audio effects
+    audioRef.current = new AudioEffects();
+
     // Connect to WebSocket
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
     const wsUrl = `${protocol}//${window.location.host}/ws`;
@@ -52,22 +59,54 @@ export default function AviatorGame() {
 
     ws.onopen = () => {
       setIsConnected(true);
+      audioRef.current?.resume();
+      
+      // Start ambient casino sounds
+      if (audioRef.current && audioEnabled) {
+        audioRef.current.createAmbientLoop();
+      }
     };
 
     ws.onmessage = (event) => {
       const data = JSON.parse(event.data);
+      const prevState = gameState;
       
       switch (data.type) {
         case 'gameState':
         case 'gameUpdate':
           setGameState(data.data);
+          
+          // Play appropriate sounds based on game state changes
+          if (audioRef.current && audioEnabled) {
+            if (prevState.status === 'waiting' && data.data.status === 'flying') {
+              audioRef.current.createEngineSound();
+              flyingSoundRef.current = audioRef.current.createContinuousFlyingSound();
+            } else if (data.data.status === 'flying' && data.data.multiplier > prevState.multiplier) {
+              audioRef.current.createAscendingTone(440 + (data.data.multiplier - 1) * 50, 880 + (data.data.multiplier - 1) * 50);
+            } else if (prevState.status === 'crashed' && data.data.status === 'waiting') {
+              audioRef.current.createWaitingSound();
+            }
+          }
           break;
         case 'gameCrashed':
           setGameState(prev => ({ ...prev, status: 'crashed' }));
           setUserBet(null);
+          
+          // Stop flying sound and play crash sound
+          if (flyingSoundRef.current) {
+            flyingSoundRef.current.stop();
+            flyingSoundRef.current = null;
+          }
+          
+          if (audioRef.current && audioEnabled) {
+            audioRef.current.createSoftCrash();
+          }
           break;
         case 'playerCashedOut':
           // Handle player cash out
+          if (audioRef.current && audioEnabled) {
+            audioRef.current.createCashOutSound();
+          }
           break;
       }
     };
@@ -79,7 +118,7 @@ export default function AviatorGame() {
     return () => {
       ws.close();
     };
-  }, []);
+  }, [audioEnabled]);
 
   useEffect(() => {
     // Canvas animation
@@ -256,6 +295,11 @@ export default function AviatorGame() {
 
     setUserBet(amount);
     
+    // Play bet sound
+    if (audioRef.current && audioEnabled) {
+      audioRef.current.createBetSound();
+    }
+    
     // Send bet to server via WebSocket
     if (wsRef.current) {
       wsRef.current.send(JSON.stringify({
@@ -268,6 +312,12 @@ export default function AviatorGame() {
 
   const handleCashOut = () => {
     if (!userBet || gameState.status !== 'flying') return;
+    
+    // Play cash out sound
+    if (audioRef.current && audioEnabled) {
+      audioRef.current.createCashOutSound();
+      audioRef.current.createWinSound(gameState.multiplier);
+    }
     
     // Send cash out to server via WebSocket
     if (wsRef.current) {
@@ -324,6 +374,28 @@ export default function AviatorGame() {
             </div>
           </div>
         )}
+
+        {/* Audio Controls */}
+        <div className="absolute bottom-4 right-4 flex items-center space-x-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              const newState = !audioEnabled;
+              setAudioEnabled(newState);
+              audioRef.current?.toggleAudio();
+              if (newState) {
+                audioRef.current?.resume();
+                audioRef.current?.createBetSound(); // Test sound
+              }
+            }}
+            className={`bg-black/50 backdrop-blur-sm border-gray-600 hover:bg-black/70 ${
+              audioEnabled ? 'text-green-400' : 'text-red-400'
+            }`}
+          >
+            {audioEnabled ? <Volume2 size={16} /> : <VolumeX size={16} />}
+          </Button>
+        </div>
 
         {/* Connection Status */}
         {!isConnected && (
