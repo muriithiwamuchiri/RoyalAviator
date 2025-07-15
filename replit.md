@@ -44,14 +44,9 @@ Preferred communication style: Simple, everyday language.
 - **Slot Games**: Collection of themed slot machines with RTP configuration
 - **Demo Mode**: Risk-free gaming with virtual balance
 - **WebSocket Integration**: Real-time game state updates
-- **Audio System**: Immersive sound effects using Web Audio API
-  - Engine sounds for plane takeoff and continuous flying
-  - Ascending tones for multiplier increases
-  - Soft crash effects (non-scary)
-  - Bet placement and cash-out sounds
-  - Win celebration audio based on multiplier
-  - Ambient casino atmosphere
-  - User-controllable audio toggle
+- **Audio System**: Disabled per user preference
+  - All sound effects removed from the application
+  - Silent gaming experience maintained throughout
 
 ### Payment System
 - **NOWPayments Integration**: Cryptocurrency deposit/withdrawal processing
