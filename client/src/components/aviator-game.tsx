@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/hooks/use-auth";
-import { Plane, TrendingUp } from "lucide-react";
+import { Plane, TrendingUp, DollarSign, Zap, Star } from "lucide-react";
 
 interface GameState {
   multiplier: number;
@@ -30,12 +30,16 @@ export default function AviatorGame() {
   const [isConnected, setIsConnected] = useState(false);
   const wsRef = useRef<WebSocket | null>(null);
 
-  // Mock recent wins data
+  // Mock recent wins data with more appealing wins
   const recentWins: RecentWin[] = [
-    { player: "Player***2847", amount: "$127.50", multiplier: "2.55x" },
-    { player: "Player***9234", amount: "$89.20", multiplier: "1.78x" },
-    { player: "Player***5671", amount: "$234.10", multiplier: "4.68x" },
-    { player: "Player***1023", amount: "$156.75", multiplier: "3.14x" },
+    { player: "Player***2847", amount: "$1,245.80", multiplier: "12.45x" },
+    { player: "Player***9234", amount: "$3,890.20", multiplier: "8.95x" },
+    { player: "Player***5671", amount: "$2,341.60", multiplier: "6.78x" },
+    { player: "Player***1023", amount: "$5,675.25", multiplier: "15.14x" },
+    { player: "Player***7845", amount: "$892.40", multiplier: "4.46x" },
+    { player: "Player***3421", amount: "$1,567.80", multiplier: "7.84x" },
+    { player: "Player***9876", amount: "$4,234.70", multiplier: "21.17x" },
+    { player: "Player***6543", amount: "$987.50", multiplier: "3.95x" },
   ];
 
   useEffect(() => {
@@ -85,56 +89,163 @@ export default function AviatorGame() {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
+    let smokeParticles: Array<{x: number, y: number, age: number}> = [];
+    let explosionParticles: Array<{x: number, y: number, vx: number, vy: number, age: number}> = [];
+    let animationFrame: number;
+
     const animate = () => {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       
-      // Draw sky gradient
+      // Draw dynamic sky gradient
       const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
-      gradient.addColorStop(0, '#87CEEB');
-      gradient.addColorStop(1, '#4682B4');
+      if (gameState.status === 'crashed') {
+        gradient.addColorStop(0, '#FF6B6B');
+        gradient.addColorStop(0.7, '#FF8E8E');
+        gradient.addColorStop(1, '#FFB3B3');
+      } else {
+        gradient.addColorStop(0, '#4A90E2');
+        gradient.addColorStop(0.7, '#7BB3F0');
+        gradient.addColorStop(1, '#A8D0F0');
+      }
       ctx.fillStyle = gradient;
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-      // Draw clouds
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
-      ctx.beginPath();
-      ctx.arc(100, 80, 30, 0, Math.PI * 2);
-      ctx.arc(200, 60, 25, 0, Math.PI * 2);
-      ctx.arc(300, 90, 35, 0, Math.PI * 2);
-      ctx.fill();
+      // Draw animated clouds
+      const time = Date.now() * 0.001;
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+      for (let i = 0; i < 4; i++) {
+        const cloudX = (100 + i * 120 + Math.sin(time + i) * 20) % (canvas.width + 100);
+        const cloudY = 60 + Math.sin(time * 0.5 + i) * 15;
+        ctx.beginPath();
+        ctx.arc(cloudX, cloudY, 25 + i * 5, 0, Math.PI * 2);
+        ctx.arc(cloudX + 20, cloudY, 20 + i * 3, 0, Math.PI * 2);
+        ctx.arc(cloudX - 15, cloudY + 10, 18 + i * 2, 0, Math.PI * 2);
+        ctx.fill();
+      }
 
-      // Draw plane
-      const planeX = gameState.status === 'flying' ? 50 + (gameState.multiplier - 1) * 100 : 50;
-      const planeY = gameState.status === 'flying' ? canvas.height - 100 - (gameState.multiplier - 1) * 50 : canvas.height - 100;
+      // Calculate plane position with ascending trajectory
+      const progress = Math.min((gameState.multiplier - 1) / 9, 1);
+      const planeX = 50 + progress * (canvas.width - 100);
+      const planeY = canvas.height - 80 - progress * (canvas.height - 120);
       
-      ctx.fillStyle = '#ffffff';
-      ctx.font = '24px Arial';
-      ctx.fillText('✈️', planeX, planeY);
-
-      // Draw trajectory line
+      // Draw red trajectory line
       if (gameState.status === 'flying') {
         ctx.strokeStyle = '#ef4444';
-        ctx.lineWidth = 2;
+        ctx.lineWidth = 3;
         ctx.beginPath();
-        ctx.moveTo(50, canvas.height - 100);
+        ctx.moveTo(50, canvas.height - 80);
+        ctx.lineTo(planeX, planeY);
+        ctx.stroke();
+        
+        // Add pulsing effect to the line
+        ctx.strokeStyle = `rgba(239, 68, 68, ${0.3 + 0.3 * Math.sin(time * 3)})`;
+        ctx.lineWidth = 6;
+        ctx.beginPath();
+        ctx.moveTo(50, canvas.height - 80);
         ctx.lineTo(planeX, planeY);
         ctx.stroke();
       }
 
-      // Draw smoke trail
+      // Draw enhanced smoke trail
       if (gameState.status === 'flying') {
-        for (let i = 0; i < 5; i++) {
-          ctx.fillStyle = `rgba(255, 255, 255, ${0.8 - i * 0.15})`;
-          ctx.beginPath();
-          ctx.arc(planeX - i * 8, planeY + 5, 3 - i * 0.3, 0, Math.PI * 2);
-          ctx.fill();
-        }
+        smokeParticles.push({x: planeX - 20, y: planeY + 5, age: 0});
+        
+        // Update and draw smoke particles
+        smokeParticles = smokeParticles.filter(particle => {
+          particle.age += 0.02;
+          particle.x -= 1;
+          particle.y += Math.sin(particle.age * 5) * 0.5;
+          
+          if (particle.age < 1) {
+            const alpha = 1 - particle.age;
+            const size = 2 + particle.age * 6;
+            ctx.fillStyle = `rgba(200, 200, 200, ${alpha * 0.6})`;
+            ctx.beginPath();
+            ctx.arc(particle.x, particle.y, size, 0, Math.PI * 2);
+            ctx.fill();
+            return true;
+          }
+          return false;
+        });
       }
 
-      requestAnimationFrame(animate);
+      // Draw plane with rotation based on trajectory
+      ctx.save();
+      ctx.translate(planeX, planeY);
+      const angle = gameState.status === 'flying' ? -Math.atan2(progress * (canvas.height - 120), progress * (canvas.width - 100)) : 0;
+      ctx.rotate(angle);
+      
+      // Enhanced plane drawing
+      ctx.fillStyle = '#ffffff';
+      ctx.font = '28px Arial';
+      ctx.textAlign = 'center';
+      ctx.fillText('✈️', 0, 0);
+      
+      // Add glow effect to plane
+      ctx.shadowColor = '#FFD700';
+      ctx.shadowBlur = gameState.status === 'flying' ? 10 : 5;
+      ctx.fillText('✈️', 0, 0);
+      
+      ctx.restore();
+
+      // Draw crash explosion
+      if (gameState.status === 'crashed') {
+        if (explosionParticles.length === 0) {
+          // Create explosion particles
+          for (let i = 0; i < 20; i++) {
+            explosionParticles.push({
+              x: planeX,
+              y: planeY,
+              vx: (Math.random() - 0.5) * 10,
+              vy: (Math.random() - 0.5) * 10,
+              age: 0
+            });
+          }
+        }
+        
+        // Update and draw explosion particles
+        explosionParticles = explosionParticles.filter(particle => {
+          particle.age += 0.05;
+          particle.x += particle.vx;
+          particle.y += particle.vy;
+          particle.vy += 0.2; // gravity
+          
+          if (particle.age < 1) {
+            const alpha = 1 - particle.age;
+            const size = 3 + particle.age * 5;
+            ctx.fillStyle = `rgba(255, ${100 - particle.age * 100}, 0, ${alpha})`;
+            ctx.beginPath();
+            ctx.arc(particle.x, particle.y, size, 0, Math.PI * 2);
+            ctx.fill();
+            return true;
+          }
+          return false;
+        });
+      }
+
+      // Draw multiplier display
+      if (gameState.status === 'flying') {
+        ctx.fillStyle = '#FFD700';
+        ctx.font = 'bold 24px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText(`${gameState.multiplier.toFixed(2)}x`, planeX, planeY - 40);
+        
+        // Add shadow to multiplier text
+        ctx.shadowColor = '#000000';
+        ctx.shadowBlur = 3;
+        ctx.fillText(`${gameState.multiplier.toFixed(2)}x`, planeX, planeY - 40);
+      }
+
+      animationFrame = requestAnimationFrame(animate);
     };
 
     animate();
+    
+    return () => {
+      if (animationFrame) {
+        cancelAnimationFrame(animationFrame);
+      }
+    };
   }, [gameState]);
 
   const handlePlaceBet = () => {
@@ -180,8 +291,11 @@ export default function AviatorGame() {
         />
         
         {/* Game Info Overlay */}
-        <div className="absolute top-4 left-4 bg-black/50 rounded-lg px-4 py-2">
-          <div className="text-2xl font-bold text-yellow-400">
+        <div className="absolute top-4 left-4 bg-black/70 backdrop-blur-sm rounded-xl px-4 py-3 border border-yellow-400/30">
+          <div className={`text-3xl font-bold mb-1 ${
+            gameState.status === 'flying' ? 'text-yellow-400 animate-glow' : 
+            gameState.status === 'crashed' ? 'text-red-400' : 'text-gray-400'
+          }`}>
             {gameState.multiplier.toFixed(2)}x
           </div>
           <div className="text-sm text-gray-300">
@@ -190,8 +304,8 @@ export default function AviatorGame() {
         </div>
         
         {/* Game Status */}
-        <div className="absolute top-4 right-4 px-4 py-2 rounded-lg">
-          <div className={`text-sm font-medium ${
+        <div className="absolute top-4 right-4 px-4 py-2 rounded-lg bg-black/50 backdrop-blur-sm">
+          <div className={`text-sm font-medium px-2 py-1 rounded ${
             gameState.status === 'flying' ? 'bg-green-500/80 text-white' :
             gameState.status === 'crashed' ? 'bg-red-500/80 text-white' :
             'bg-yellow-500/80 text-black'
@@ -201,6 +315,15 @@ export default function AviatorGame() {
              'WAITING'}
           </div>
         </div>
+
+        {/* Crash Effect Overlay */}
+        {gameState.status === 'crashed' && (
+          <div className="absolute inset-0 bg-red-600/20 rounded-xl flex items-center justify-center">
+            <div className="text-6xl font-bold text-red-400 animate-pulse">
+              💥 CRASHED!
+            </div>
+          </div>
+        )}
 
         {/* Connection Status */}
         {!isConnected && (
@@ -266,15 +389,28 @@ export default function AviatorGame() {
         
         {/* Recent Wins Ticker */}
         <div className="bg-gray-800/30 rounded-xl p-4">
-          <h3 className="text-lg font-semibold mb-3 text-yellow-400">Recent Wins</h3>
-          <div className="space-y-2 max-h-32 overflow-y-auto">
-            {recentWins.map((win, index) => (
-              <div key={index} className="flex justify-between items-center text-sm">
-                <span className="text-gray-300">{win.player}</span>
-                <span className="text-green-400 font-medium">{win.amount}</span>
-                <span className="text-yellow-400">{win.multiplier}</span>
-              </div>
-            ))}
+          <h3 className="text-lg font-semibold mb-3 text-yellow-400 flex items-center space-x-2">
+            <Star className="text-yellow-400" size={18} />
+            <span>Big Wins</span>
+          </h3>
+          <div className="space-y-2 max-h-32 overflow-hidden">
+            <div className="animate-pulse-slow">
+              {recentWins.slice(0, 4).map((win, index) => (
+                <div key={index} className="flex justify-between items-center text-sm py-1 hover:bg-gray-700/30 rounded px-2 transition-colors">
+                  <span className="text-gray-300 flex items-center space-x-1">
+                    <DollarSign size={12} className="text-green-400" />
+                    <span>{win.player}</span>
+                  </span>
+                  <span className="text-green-400 font-bold">{win.amount}</span>
+                  <span className="text-yellow-400 font-bold bg-yellow-400/20 px-2 py-1 rounded">{win.multiplier}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="mt-3 text-center">
+            <div className="text-xs text-gray-500">
+              💎 {recentWins.length} players won today
+            </div>
           </div>
         </div>
         

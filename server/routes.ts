@@ -53,6 +53,12 @@ export function registerRoutes(app: Express): Server {
     
     try {
       const { amount, currency } = req.body;
+      
+      // Validate minimum deposit amount
+      if (amount < 20) {
+        return res.status(400).json({ error: "Minimum deposit amount is $20 USD" });
+      }
+      
       const orderId = `${req.user!.id}-${Date.now()}`;
       
       const payment = await nowPaymentsService.createPayment(amount, currency, orderId);
@@ -83,7 +89,7 @@ export function registerRoutes(app: Express): Server {
       
       // Check user balance
       const user = await storage.getUser(req.user!.id);
-      if (!user || parseFloat(user.realBalance) < amount) {
+      if (!user || parseFloat(user.realBalance || "0") < amount) {
         return res.status(400).json({ error: "Insufficient balance" });
       }
       
@@ -102,7 +108,7 @@ export function registerRoutes(app: Express): Server {
       });
       
       // Update user balance
-      const newBalance = (parseFloat(user.realBalance) - amount).toString();
+      const newBalance = (parseFloat(user.realBalance || "0") - amount).toString();
       await storage.updateUserBalance(req.user!.id, newBalance);
       
       res.json(payout);
@@ -162,14 +168,14 @@ export function registerRoutes(app: Express): Server {
       const user = await storage.getUser(req.user!.id);
       if (user) {
         const betAmount = parseFloat(validatedRound.betAmount);
-        const winAmount = parseFloat(validatedRound.winAmount);
+        const winAmount = parseFloat(validatedRound.winAmount || "0");
         
         if (validatedRound.isDemoMode) {
-          const newDemoBalance = (parseFloat(user.demoBalance) - betAmount + winAmount).toString();
+          const newDemoBalance = (parseFloat(user.demoBalance || "0") - betAmount + winAmount).toString();
           await storage.updateUserBalance(req.user!.id, undefined, newDemoBalance);
         } else {
-          const newRealBalance = (parseFloat(user.realBalance) - betAmount + winAmount).toString();
-          await storage.updateUserBalance(req.user!.id, newRealBalance);
+          const newRealBalance = (parseFloat(user.realBalance || "0") - betAmount + winAmount).toString();
+          await storage.updateUserBalance(req.user!.id, newRealBalance, undefined);
         }
       }
       

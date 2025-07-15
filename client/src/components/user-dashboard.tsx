@@ -60,7 +60,14 @@ export default function UserDashboard() {
   const handleDeposit = (e: React.FormEvent) => {
     e.preventDefault();
     const amount = parseFloat(depositAmount);
-    if (isNaN(amount) || amount <= 0) return;
+    if (isNaN(amount) || amount < 20) {
+      toast({
+        title: "Invalid Amount",
+        description: "Minimum deposit amount is $20 USD",
+        variant: "destructive",
+      });
+      return;
+    }
     
     depositMutation.mutate({ amount, currency: depositCurrency });
   };
@@ -170,8 +177,8 @@ export default function UserDashboard() {
                 id="depositAmount"
                 type="number"
                 step="0.01"
-                min="10"
-                placeholder="Enter amount"
+                min="20"
+                placeholder="Min $20 USD"
                 value={depositAmount}
                 onChange={(e) => setDepositAmount(e.target.value)}
                 className="bg-gray-700 border-gray-600 text-white"
