@@ -33,15 +33,31 @@ export const transactions = pgTable("transactions", {
 export const games = pgTable("games", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
-  type: text("type").notNull(), // 'slot', 'aviator'
+  type: text("type").notNull(), // 'slot', 'aviator', 'table', 'lottery'
   rtp: decimal("rtp", { precision: 5, scale: 2 }).notNull(),
   demoRtp: decimal("demo_rtp", { precision: 5, scale: 2 }).notNull(),
   volatility: text("volatility").notNull(),
   paylines: integer("paylines"),
   features: text("features").array(),
   imageUrl: text("image_url").notNull(),
+  description: text("description"),
+  minBet: decimal("min_bet", { precision: 10, scale: 2 }).default("0.10"),
+  maxBet: decimal("max_bet", { precision: 10, scale: 2 }).default("100.00"),
   isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const gameApis = pgTable("game_apis", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  provider: text("provider").notNull(),
+  apiUrl: text("api_url").notNull(),
+  apiKey: text("api_key").notNull(),
+  secretKey: text("secret_key"),
+  isActive: boolean("is_active").default(true),
+  supportedGameTypes: text("supported_game_types").array(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 export const gameRounds = pgTable("game_rounds", {
@@ -121,6 +137,12 @@ export const insertNowPaymentsConfigSchema = createInsertSchema(nowPaymentsConfi
   updatedAt: true,
 });
 
+export const insertGameApiSchema = createInsertSchema(gameApis).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 // Types
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -132,3 +154,5 @@ export type GameRound = typeof gameRounds.$inferSelect;
 export type InsertGameRound = z.infer<typeof insertGameRoundSchema>;
 export type NowPaymentsConfig = typeof nowPaymentsConfig.$inferSelect;
 export type InsertNowPaymentsConfig = z.infer<typeof insertNowPaymentsConfigSchema>;
+export type GameApi = typeof gameApis.$inferSelect;
+export type InsertGameApi = z.infer<typeof insertGameApiSchema>;

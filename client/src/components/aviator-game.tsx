@@ -28,6 +28,8 @@ export default function AviatorGame() {
   const [autoCashout, setAutoCashout] = useState("2.00");
   const [userBet, setUserBet] = useState<number | null>(null);
   const [isConnected, setIsConnected] = useState(false);
+  const [isDemoMode, setIsDemoMode] = useState(true);
+  const [balance, setBalance] = useState(1000); // Demo balance
   const wsRef = useRef<WebSocket | null>(null);
 
   // Mock recent wins data with more appealing wins

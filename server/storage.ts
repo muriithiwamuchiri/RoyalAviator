@@ -1,4 +1,4 @@
-import { users, transactions, games, gameRounds, nowPaymentsConfig, type User, type InsertUser, type Transaction, type InsertTransaction, type Game, type InsertGame, type GameRound, type InsertGameRound, type NowPaymentsConfig, type InsertNowPaymentsConfig } from "@shared/schema";
+import { users, transactions, games, gameRounds, nowPaymentsConfig, gameApis, type User, type InsertUser, type Transaction, type InsertTransaction, type Game, type InsertGame, type GameRound, type InsertGameRound, type NowPaymentsConfig, type InsertNowPaymentsConfig, type GameApi, type InsertGameApi } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and } from "drizzle-orm";
 import session from "express-session";
@@ -25,6 +25,7 @@ export interface IStorage {
   getGames(): Promise<Game[]>;
   getGameById(id: number): Promise<Game | undefined>;
   createGame(game: InsertGame): Promise<Game>;
+  deleteGame(id: number): Promise<void>;
   
   // Game rounds
   createGameRound(gameRound: InsertGameRound): Promise<GameRound>;
@@ -33,6 +34,13 @@ export interface IStorage {
   // NOWPayments configuration
   getNowPaymentsConfig(): Promise<NowPaymentsConfig | undefined>;
   updateNowPaymentsConfig(config: InsertNowPaymentsConfig): Promise<NowPaymentsConfig>;
+
+  // Game APIs management
+  getGameApis(): Promise<GameApi[]>;
+  getGameApiById(id: number): Promise<GameApi | undefined>;
+  createGameApi(gameApi: InsertGameApi): Promise<GameApi>;
+  updateGameApi(id: number, gameApi: Partial<InsertGameApi>): Promise<GameApi>;
+  deleteGameApi(id: number): Promise<void>;
 
   // Session store
   sessionStore: session.Store;
@@ -128,6 +136,10 @@ export class DatabaseStorage implements IStorage {
     return result;
   }
 
+  async deleteGame(id: number): Promise<void> {
+    await db.delete(games).where(eq(games.id, id));
+  }
+
   async createGameRound(gameRound: InsertGameRound): Promise<GameRound> {
     const [result] = await db
       .insert(gameRounds)
@@ -163,6 +175,37 @@ export class DatabaseStorage implements IStorage {
       .values(config)
       .returning();
     return result;
+  }
+
+  async getGameApis(): Promise<GameApi[]> {
+    return await db.select().from(gameApis).where(eq(gameApis.isActive, true));
+  }
+
+  async getGameApiById(id: number): Promise<GameApi | undefined> {
+    const [gameApi] = await db.select().from(gameApis).where(eq(gameApis.id, id));
+    return gameApi;
+  }
+
+  async createGameApi(gameApi: InsertGameApi): Promise<GameApi> {
+    const [created] = await db.insert(gameApis).values(gameApi).returning();
+    return created;
+  }
+
+  async updateGameApi(id: number, gameApi: Partial<InsertGameApi>): Promise<GameApi> {
+    const [updated] = await db.update(gameApis)
+      .set({
+        ...gameApi,
+        updatedAt: new Date(),
+      })
+      .where(eq(gameApis.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteGameApi(id: number): Promise<void> {
+    await db.update(gameApis)
+      .set({ isActive: false })
+      .where(eq(gameApis.id, id));
   }
 }
 

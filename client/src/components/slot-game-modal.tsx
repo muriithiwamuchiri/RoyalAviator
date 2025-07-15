@@ -16,7 +16,16 @@ interface SlotGameModalProps {
   onClose: () => void;
 }
 
-const SLOT_SYMBOLS = ['🍒', '🍋', '🍊', '🍇', '🔔', '⭐', '💎', '👑'];
+const SLOT_THEMES = {
+  'Egyptian Riches': ['🔺', '👁️', '🏺', '🦅', '💰', '⚱️', '🐍', '🌟'],
+  'Neon Nights': ['💜', '🌆', '⚡', '🔥', '💎', '🌈', '🎯', '🚀'],
+  'Galactic Fortune': ['🚀', '🌌', '👽', '🛸', '⭐', '🌟', '🪐', '🌠'],
+  'Wild Safari': ['🦁', '🐘', '🦒', '🦓', '🐆', '🦏', '🌿', '🌺'],
+  'Dragon\'s Hoard': ['🐉', '🔥', '⚔️', '🏰', '💎', '👑', '🛡️', '🌋'],
+  'Ocean\'s Treasure': ['🏴‍☠️', '⚓', '🦜', '💰', '🗺️', '🌊', '🐚', '💎'],
+  'Royal Crown': ['👑', '💎', '🏰', '⚜️', '💍', '🎭', '🗡️', '🌟'],
+  'Mystic Forest': ['🧚', '🌸', '🦋', '🌿', '🍄', '⭐', '🔮', '🌺']
+};
 
 export default function SlotGameModal({ game, isOpen, onClose }: SlotGameModalProps) {
   const { user } = useAuth();
@@ -109,14 +118,16 @@ export default function SlotGameModal({ game, isOpen, onClose }: SlotGameModalPr
     const animationInterval = 100;
     let elapsed = 0;
     
+    const gameSymbols = SLOT_THEMES[game.name as keyof typeof SLOT_THEMES] || SLOT_THEMES['Egyptian Riches'];
+    
     const animate = () => {
       if (elapsed < animationDuration) {
-        setReels(prev => prev.map(() => Math.floor(Math.random() * SLOT_SYMBOLS.length)));
+        setReels(prev => prev.map(() => Math.floor(Math.random() * gameSymbols.length)));
         elapsed += animationInterval;
         setTimeout(animate, animationInterval);
       } else {
         // Final spin result
-        const finalReels = Array.from({ length: 5 }, () => Math.floor(Math.random() * SLOT_SYMBOLS.length));
+        const finalReels = Array.from({ length: 5 }, () => Math.floor(Math.random() * gameSymbols.length));
         setReels(finalReels);
         
         // For guest users, simulate the game locally
@@ -217,7 +228,7 @@ export default function SlotGameModal({ game, isOpen, onClose }: SlotGameModalPr
                       isSpinning ? 'animate-spin' : ''
                     }`}
                   >
-                    {SLOT_SYMBOLS[reel]}
+                    {(SLOT_THEMES[game.name as keyof typeof SLOT_THEMES] || SLOT_THEMES['Egyptian Riches'])[reel]}
                   </div>
                 ))}
               </div>

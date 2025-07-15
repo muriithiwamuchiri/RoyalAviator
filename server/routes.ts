@@ -5,7 +5,7 @@ import { setupAuth } from "./auth";
 import { storage } from "./storage";
 import { nowPaymentsService } from "./services/nowpayments";
 import { aviatorService } from "./services/aviator";
-import { insertTransactionSchema, insertGameRoundSchema, insertNowPaymentsConfigSchema } from "@shared/schema";
+import { insertTransactionSchema, insertGameRoundSchema, insertNowPaymentsConfigSchema, insertGameSchema, insertGameApiSchema } from "@shared/schema";
 
 export function registerRoutes(app: Express): Server {
   // Setup authentication routes
@@ -149,6 +149,91 @@ export function registerRoutes(app: Express): Server {
       res.json({ connected: isConnected });
     } catch (error) {
       res.status(500).json({ error: "Failed to test connection" });
+    }
+  });
+
+  // Admin Game Management routes
+  app.get("/api/admin/games", async (req, res) => {
+    if (!req.isAuthenticated() || !req.user?.isAdmin) return res.sendStatus(403);
+    
+    try {
+      const games = await storage.getGames();
+      res.json(games);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch games" });
+    }
+  });
+
+  app.post("/api/admin/games", async (req, res) => {
+    if (!req.isAuthenticated() || !req.user?.isAdmin) return res.sendStatus(403);
+    
+    try {
+      const validatedGame = insertGameSchema.parse(req.body);
+      const game = await storage.createGame(validatedGame);
+      res.json(game);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to create game" });
+    }
+  });
+
+  app.delete("/api/admin/games/:id", async (req, res) => {
+    if (!req.isAuthenticated() || !req.user?.isAdmin) return res.sendStatus(403);
+    
+    try {
+      const id = parseInt(req.params.id);
+      await storage.deleteGame(id);
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to delete game" });
+    }
+  });
+
+  // Admin Game API Management routes
+  app.get("/api/admin/game-apis", async (req, res) => {
+    if (!req.isAuthenticated() || !req.user?.isAdmin) return res.sendStatus(403);
+    
+    try {
+      const gameApis = await storage.getGameApis();
+      res.json(gameApis);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch game APIs" });
+    }
+  });
+
+  app.post("/api/admin/game-apis", async (req, res) => {
+    if (!req.isAuthenticated() || !req.user?.isAdmin) return res.sendStatus(403);
+    
+    try {
+      const validatedGameApi = insertGameApiSchema.parse(req.body);
+      const gameApi = await storage.createGameApi(validatedGameApi);
+      res.json(gameApi);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to create game API" });
+    }
+  });
+
+  app.put("/api/admin/game-apis/:id", async (req, res) => {
+    if (!req.isAuthenticated() || !req.user?.isAdmin) return res.sendStatus(403);
+    
+    try {
+      const id = parseInt(req.params.id);
+      const validatedGameApi = insertGameApiSchema.partial().parse(req.body);
+      const gameApi = await storage.updateGameApi(id, validatedGameApi);
+      res.json(gameApi);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to update game API" });
+    }
+  });
+
+  app.delete("/api/admin/game-apis/:id", async (req, res) => {
+    if (!req.isAuthenticated() || !req.user?.isAdmin) return res.sendStatus(403);
+    
+    try {
+      const id = parseInt(req.params.id);
+      await storage.deleteGameApi(id);
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to delete game API" });
     }
   });
 
@@ -383,57 +468,101 @@ async function seedGames() {
       volatility: "Medium",
       paylines: 20,
       features: ["Wilds", "Free Spins", "Multipliers"],
-      imageUrl: "https://images.unsplash.com/photo-1596838132731-3301c3fd4317?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=800&h=600"
+      imageUrl: "https://images.unsplash.com/photo-1596838132731-3301c3fd4317?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=800&h=600",
+      description: "Uncover ancient treasures in this mystical Egyptian adventure",
+      minBet: "0.20",
+      maxBet: "50.00"
     },
     {
-      name: "Mythical Treasures",
+      name: "Neon Nights",
       type: "slot",
       rtp: "97.1",
       demoRtp: "98.8",
       volatility: "High",
       paylines: 25,
-      features: ["Bonus Rounds", "Free Spins", "Wilds"],
-      imageUrl: "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=800&h=600"
+      features: ["Sticky Wilds", "Mega Wins", "Cascade Reels"],
+      imageUrl: "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=800&h=600",
+      description: "Experience the vibrant city nightlife with electric wins",
+      minBet: "0.50",
+      maxBet: "200.00"
     },
     {
-      name: "Space Adventures",
+      name: "Galactic Fortune",
       type: "slot",
       rtp: "95.8",
       demoRtp: "98.2",
       volatility: "Medium",
       paylines: 30,
-      features: ["Expanding Wilds", "Free Spins"],
-      imageUrl: "https://pixabay.com/get/g6752f432bb29bc83465d0f9d038f5a6532a3867b388d6fcd66027db9a6301d4f53cdd3c60aaf15bdca54be97ab71d1a327b15ab718c1bd260c2b3770ebcaafb8_1280.jpg"
+      features: ["Expanding Wilds", "Cosmic Bonus", "Planet Multipliers"],
+      imageUrl: "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=800&h=600",
+      description: "Journey through space to discover cosmic treasures",
+      minBet: "0.25",
+      maxBet: "75.00"
     },
     {
-      name: "Animal Kingdom",
+      name: "Wild Safari",
       type: "slot",
       rtp: "96.5",
       demoRtp: "98.4",
       volatility: "Low",
       paylines: 20,
-      features: ["Stacked Wilds", "Free Spins"],
-      imageUrl: "https://pixabay.com/get/gb850707b7c0a17e8da3dc18a55b5987a28ba1cb6f429b52403b0227d795ecef2afd1d85c8e88f4f4bc5ec465c0ca5ba0f8effa9933027e1bcbe1a5b6d7936f2b_1280.jpg"
+      features: ["Stacked Animals", "Safari Bonus", "Wild Stampede"],
+      imageUrl: "https://images.unsplash.com/photo-1549366021-9f761d040a94?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=800&h=600",
+      description: "Embark on an African safari adventure with wild animals",
+      minBet: "0.10",
+      maxBet: "25.00"
     },
     {
-      name: "Royal Diamonds",
+      name: "Dragon's Hoard",
       type: "slot",
       rtp: "97.3",
       demoRtp: "98.9",
       volatility: "High",
       paylines: 40,
-      features: ["Cascading Reels", "Multipliers", "Free Spins"],
-      imageUrl: "https://pixabay.com/get/g9289301429324e88905e0ebb550f71d236f258e16b960e87e5bcb5829e6de7056ef312167f1e53181f2563a001c86601bda486eece8393da91a0dc4eddc802e0_1280.jpg"
+      features: ["Dragon Wilds", "Fire Respins", "Treasure Vault"],
+      imageUrl: "https://images.unsplash.com/photo-1578662996442-48f60103fc96?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=800&h=600",
+      description: "Face mighty dragons and claim their legendary treasures",
+      minBet: "0.40",
+      maxBet: "150.00"
     },
     {
-      name: "Pirate's Gold",
+      name: "Ocean's Treasure",
       type: "slot",
       rtp: "96.8",
       demoRtp: "98.6",
       volatility: "Medium",
       paylines: 25,
-      features: ["Treasure Bonus", "Free Spins", "Wilds"],
-      imageUrl: "https://pixabay.com/get/gfe9f7fc91486685252fd9e81a52e1e0f5e5471e1bfe8f14d0afd6a53803909d6961c744d8bb180d0361aded770fbc92768fbef529d29dff5779d564d07938e93_1280.jpg"
+      features: ["Pirate Bonus", "Shipwreck Wilds", "Treasure Map"],
+      imageUrl: "https://images.unsplash.com/photo-1544551763-46a013bb70d5?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=800&h=600",
+      description: "Dive deep into the ocean to find sunken pirate treasures",
+      minBet: "0.30",
+      maxBet: "100.00"
+    },
+    {
+      name: "Royal Crown",
+      type: "slot",
+      rtp: "97.5",
+      demoRtp: "99.0",
+      volatility: "High",
+      paylines: 50,
+      features: ["Crown Wilds", "Royal Bonus", "Jewel Multipliers"],
+      imageUrl: "https://images.unsplash.com/photo-1576833220799-5e3cde1e4e1d?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=800&h=600",
+      description: "Enter the royal palace and claim the crown jewels",
+      minBet: "0.50",
+      maxBet: "250.00"
+    },
+    {
+      name: "Mystic Forest",
+      type: "slot",
+      rtp: "96.0",
+      demoRtp: "98.3",
+      volatility: "Low",
+      paylines: 15,
+      features: ["Fairy Magic", "Enchanted Wilds", "Nature Bonus"],
+      imageUrl: "https://images.unsplash.com/photo-1441974231531-c6227db76b6e?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=800&h=600",
+      description: "Discover magical creatures and mystical powers in the enchanted forest",
+      minBet: "0.15",
+      maxBet: "40.00"
     }
   ];
 

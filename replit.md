@@ -41,12 +41,27 @@ Preferred communication style: Simple, everyday language.
 
 ### Game Engine
 - **Aviator Game**: Real-time crash game with provably fair mechanics
-- **Slot Games**: Collection of themed slot machines with RTP configuration
-- **Demo Mode**: Risk-free gaming with virtual balance
+- **Slot Games**: Collection of 8 themed slot machines with unique symbols and RTP configuration
+  - Egyptian Riches: Ancient Egyptian theme with pyramids and pharaohs
+  - Neon Nights: Urban nightlife theme with electric elements
+  - Galactic Fortune: Space theme with aliens and planets
+  - Wild Safari: African safari theme with animals
+  - Dragon's Hoard: Fantasy theme with dragons and treasures
+  - Ocean's Treasure: Pirate theme with ships and treasures
+  - Royal Crown: Royal palace theme with jewels and crowns
+  - Mystic Forest: Enchanted forest theme with fairies and magic
+- **Demo Mode**: Risk-free gaming with virtual balance (no visible demo indicators)
 - **WebSocket Integration**: Real-time game state updates
 - **Audio System**: Disabled per user preference
   - All sound effects removed from the application
   - Silent gaming experience maintained throughout
+
+### Admin Dashboard
+- **Tabbed Interface**: Overview, Games, APIs, and Payments sections
+- **Game Management**: Create, view, and delete games with detailed configuration
+- **API Management**: Configure and manage third-party game APIs
+- **Payment Configuration**: NOWPayments integration setup and testing
+- **System Overview**: Real-time statistics and quick actions
 
 ### Payment System
 - **NOWPayments Integration**: Cryptocurrency deposit/withdrawal processing
